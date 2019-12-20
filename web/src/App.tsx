@@ -24,16 +24,19 @@ const LogEntryRow: React.FC<LogEntryRowProps> = (props) => {
 }
 
 const LogEntryList: React.FC<{logs: LogEntry[], timestamp: boolean}> = (props) => {
+  const [lastRenderedBefore, setLastRenderedBefore] = useState(false);
+
   return (<AutoSizer>
       {({width, height}) =>
         <List
           height={height}
           rowHeight={32}
-          rowRenderer={({index, key, style}: ListRowProps) => (
-            <LogEntryRow key={key} entry={props.logs[index]} style={style} timestamp={props.timestamp} />
-          )}
+          rowRenderer={({index, key, style}: ListRowProps) => {
+            setLastRenderedBefore(index === props.logs.length - 1);
+            return (<LogEntryRow key={key} entry={props.logs[index]} style={style} timestamp={props.timestamp} />);
+          }}
           rowCount={props.logs.length}
-          scrollToIndex={props.logs.length - 1}
+          scrollToIndex={lastRenderedBefore ? props.logs.length - 1 : undefined}
           width={width}
           />
       }
@@ -120,6 +123,9 @@ const LogStreamPanel: React.FC = () => {
   });
 
   const logs = useLogs();
+
+  // TODO: Parse levels
+  // TODO: Search text
 
   return (<div style={{flexGrow: 1, display: "flex", flexDirection: "column"}}>
     <LogStreamSettingsPanel settings={settings} onChanged={useCallback((change: Partial<LogStreamSettings>) => {
