@@ -78,17 +78,23 @@ class LogEntryEventSource {
 
 const logEntryEventSource = new LogEntryEventSource();
 
+function useQueue<T>(maximum: number, initial: T[] = []): [T[], (item: T) => void] {
+  const [queue, setQueue] = useState(initial);
+
+  const enqueue = useCallback((item: T) => {
+    setQueue((queue) => [...queue.slice(-(maximum - 1)), item]);
+  }, [maximum, setQueue]);
+
+  return [queue, enqueue]
+}
+
 function useLogs() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, enqueueLogs] = useQueue<LogEntry>(100000);
 
   useEffect(() => {
-    logEntryEventSource.addLogEntryListener((entry) => {
-      setLogs((logs: LogEntry[]) => [...logs.slice(-100000), {
-        timestamp: moment(entry['timestamp']),
-        text: entry['text'] || '',
-      }]);
-    });
-  }, []);
+    console.log("addLogEntryListener")
+    logEntryEventSource.addLogEntryListener(enqueueLogs);
+  }, [enqueueLogs]);
 
   return logs;
 }
@@ -129,8 +135,8 @@ const LogStreamPanel: React.FC = () => {
 
   return (<div style={{flexGrow: 1, display: "flex", flexDirection: "column"}}>
     <LogStreamSettingsPanel settings={settings} onChanged={useCallback((change: Partial<LogStreamSettings>) => {
-      setSettings({...settings, ...change});
-    }, [setSettings, settings])} />
+      setSettings((settings) => ({...settings, ...change}));
+    }, [setSettings])} />
     <div style={{flexGrow: 1}}>
       <LogEntryList logs={logs} showTimestamp={settings.showTimestamp} />
     </div>
@@ -138,18 +144,18 @@ const LogStreamPanel: React.FC = () => {
 };
 
 const WidgetsPanel: React.FC = () => {
-  const [latestLog, setLatestLog] = useState<number | null>(null);
+  const [batteries, enqueueBatteries] = useQueue<number>(5);
 
   useEffect(() => {
     logEntryEventSource.addLogEntryListener((entry) => {
       const res = /app: battery = (\d+)/.exec(entry.text);
       if (res) {
-        setLatestLog(parseInt(res[1]));
+        enqueueBatteries(parseInt(res[1]));
       }
     });
-  }, []);
+  }, [enqueueBatteries]);
 
-  return (<div className="WidgetsPanel">Last battery: {latestLog || ""}</div>);
+  return (<div className="WidgetsPanel">Last battery: {batteries.join(", ")}</div>);
 };
 
 const App: React.FC = () => {
