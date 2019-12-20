@@ -23,7 +23,7 @@ const LogEntryRow: React.FC<LogEntryRowProps> = (props) => {
   </div>)
 }
 
-const LogEntryList: React.FC<{logs: LogEntry[], timestamp: boolean}> = (props) => {
+const LogEntryList: React.FC<{logs: LogEntry[], showTimestamp: boolean}> = (props) => {
   const [lastRenderedBefore, setLastRenderedBefore] = useState(false);
 
   return (<AutoSizer>
@@ -33,7 +33,7 @@ const LogEntryList: React.FC<{logs: LogEntry[], timestamp: boolean}> = (props) =
           rowHeight={32}
           rowRenderer={({index, key, style}: ListRowProps) => {
             setLastRenderedBefore(index === props.logs.length - 1);
-            return (<LogEntryRow key={key} entry={props.logs[index]} style={style} timestamp={props.timestamp} />);
+            return (<LogEntryRow key={key} entry={props.logs[index]} style={style} timestamp={props.showTimestamp} />);
           }}
           rowCount={props.logs.length}
           scrollToIndex={lastRenderedBefore ? props.logs.length - 1 : undefined}
@@ -94,7 +94,7 @@ function useLogs() {
 }
 
 interface LogStreamSettings {
-  timestamp: boolean,
+  showTimestamp: boolean,
 }
 
 interface LogStreamPanelProps {
@@ -105,13 +105,13 @@ interface LogStreamPanelProps {
 const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => {
   const onTimestampChanged = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     props.onChanged({
-      timestamp: event.target.checked,
+      showTimestamp: event.target.checked,
     });
   }, [props]);
 
   return (<div className="LogStreamSettingsPanel">
     <label>
-      <input type="checkbox" onChange={onTimestampChanged} checked={props.settings.timestamp} />
+      <input type="checkbox" onChange={onTimestampChanged} checked={props.settings.showTimestamp} />
       Show Timestamp
     </label>
   </div>);
@@ -119,7 +119,7 @@ const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => {
 
 const LogStreamPanel: React.FC = () => {
   const [settings, setSettings] = useState<LogStreamSettings>({
-    timestamp: true,
+    showTimestamp: true,
   });
 
   const logs = useLogs();
@@ -132,7 +132,7 @@ const LogStreamPanel: React.FC = () => {
       setSettings({...settings, ...change});
     }, [setSettings, settings])} />
     <div style={{flexGrow: 1}}>
-      <LogEntryList logs={logs} timestamp={settings.timestamp} />
+      <LogEntryList logs={logs} showTimestamp={settings.showTimestamp} />
     </div>
   </div>);
 };
