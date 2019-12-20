@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"time"
 
@@ -20,9 +22,11 @@ func main() {
 	s := sse.NewServer(nil)
 	defer s.Shutdown()
 
-	dir := http.Dir("./web/build")
 	http.Handle("/events/", s)
-	http.Handle("/", http.FileServer(dir))
+	// dir := http.Dir("./web/build")
+	// http.Handle("/", http.FileServer(dir))
+	devServer, _ := url.Parse("http://localhost:3000/")
+	http.Handle("/", httputil.NewSingleHostReverseProxy(devServer))
 
 	go func() {
 		for {

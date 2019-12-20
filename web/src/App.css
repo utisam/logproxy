@@ -3,10 +3,19 @@ html, body, #root, .App {
     height: 100%;
 }
 
+.App {
+    display: flex;
+}
+
+.LogStreamSettingsPanel {
+    padding: 4px;
+}
+
 .LogEntryRow {
     display: flex;
     align-items: center;
     font-family: monospace;
+    padding: 4px;
 }
 .LogEntryRow>* {
     padding: 4px;
@@ -14,4 +23,16 @@ html, body, #root, .App {
 .LogEntryRow__Timestamp {
     background-color: #ccc;
     border-radius: 4px;
+}
+.LogEntryRow__Text {
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+.WidgetsPanel {
+    width: 320px;
+
+    display: grid;
 }
