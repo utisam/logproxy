@@ -3,6 +3,9 @@ import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { AutoSizer, List, ListRowProps } from 'react-virtualized';
 import 'react-virtualized/styles.css';
 import './App.css';
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
 
 interface LogEntry {
   timestamp: moment.Moment,
@@ -115,12 +118,14 @@ const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => {
     });
   }, [props]);
 
-  return (<div className="LogStreamSettingsPanel">
-    <label>
-      <input type="checkbox" onChange={onTimestampChanged} checked={props.settings.showTimestamp} />
-      Show Timestamp
-    </label>
-  </div>);
+  return (<FormGroup className="LogStreamSettingsPanel">
+    <FormControlLabel
+      control={
+        <Checkbox checked={props.settings.showTimestamp} onChange={onTimestampChanged} color="primary" />
+      }
+      label="Show Timestamp"
+    />
+  </FormGroup>);
 };
 
 const LogStreamPanel: React.FC = () => {
