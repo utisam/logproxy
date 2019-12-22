@@ -8,6 +8,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alexandrevicenzi/go-sse"
@@ -23,10 +24,21 @@ func main() {
 	defer s.Shutdown()
 
 	http.Handle("/events/", s)
-	// dir := http.Dir("./web/build")
-	// http.Handle("/", http.FileServer(dir))
-	devServer, _ := url.Parse("http://localhost:3000/")
-	http.Handle("/", httputil.NewSingleHostReverseProxy(devServer))
+
+	frontend := os.Getenv("LOGPROXY_FRONTEND")
+	if frontend == "" {
+		frontend = "./web/build"
+	}
+
+	var handler http.Handler
+	if strings.HasPrefix(frontend, "http://") {
+		devServer, _ := url.Parse("http://localhost:3000/")
+		handler = httputil.NewSingleHostReverseProxy(devServer)
+	} else {
+		http.FileServer(http.Dir(frontend))
+	}
+
+	http.Handle("/", handler)
 
 	go func() {
 		for {
