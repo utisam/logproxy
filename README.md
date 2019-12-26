@@ -1,4 +1,4 @@
-# LogProxy
+# WIP: LogProxy
 
 LogProxy is a tool to analyze console logs of standard IO.
 

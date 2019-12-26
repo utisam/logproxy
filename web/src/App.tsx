@@ -1,50 +1,10 @@
 import moment from 'moment';
-import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
-import { AutoSizer, List, ListRowProps } from 'react-virtualized';
+import React, { useCallback, useEffect, useState } from 'react';
 import 'react-virtualized/styles.css';
 import './App.css';
-import FormGroup from '@material-ui/core/FormGroup';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
-
-interface LogEntry {
-  timestamp: moment.Moment,
-  text: string,
-}
-
-interface LogEntryRowProps {
-  entry: LogEntry,
-  timestamp: boolean,
-  style: React.CSSProperties,
-}
-
-const LogEntryRow: React.FC<LogEntryRowProps> = (props) => {
-  const entry = props.entry;
-  return (<div className="LogEntryRow" style={props.style}>
-    {props.timestamp && <div className="LogEntryRow__Timestamp">{entry.timestamp.format('HH:mm:ss.SSSSSS')}</div>}
-    <div className="LogEntryRow__Text">{entry.text}</div>
-  </div>)
-}
-
-const LogEntryList: React.FC<{logs: LogEntry[], showTimestamp: boolean}> = (props) => {
-  const [lastRenderedBefore, setLastRenderedBefore] = useState(false);
-
-  return (<AutoSizer>
-      {({width, height}) =>
-        <List
-          height={height}
-          rowHeight={32}
-          rowRenderer={({index, key, style}: ListRowProps) => {
-            setLastRenderedBefore(index === props.logs.length - 1);
-            return (<LogEntryRow key={key} entry={props.logs[index]} style={style} timestamp={props.showTimestamp} />);
-          }}
-          rowCount={props.logs.length}
-          scrollToIndex={lastRenderedBefore ? props.logs.length - 1 : undefined}
-          width={width}
-          />
-      }
-    </AutoSizer>);
-}
+import { LogEntry, LogEntryList } from './components/LogEntry';
+import { useQueue } from './hooks';
+import { LogStreamSettings, LogStreamSettingsPanel, LabelCategory } from './components/LogStreamSettings';
 
 
 type LogEntryEventHandler = (entry: LogEntry) => void
@@ -81,56 +41,41 @@ class LogEntryEventSource {
 
 const logEntryEventSource = new LogEntryEventSource();
 
-function useQueue<T>(maximum: number, initial: T[] = []): [T[], (item: T) => void] {
-  const [queue, setQueue] = useState(initial);
-
-  const enqueue = useCallback((item: T) => {
-    setQueue((queue) => [...queue.slice(-(maximum - 1)), item]);
-  }, [maximum, setQueue]);
-
-  return [queue, enqueue]
-}
-
 function useLogs() {
   const [logs, enqueueLogs] = useQueue<LogEntry>(100000);
 
   useEffect(() => {
-    console.log("addLogEntryListener")
     logEntryEventSource.addLogEntryListener(enqueueLogs);
   }, [enqueueLogs]);
 
   return logs;
 }
 
-interface LogStreamSettings {
-  showTimestamp: boolean,
-}
-
-interface LogStreamPanelProps {
-  settings: LogStreamSettings,
-  onChanged: ((settings: Partial<LogStreamSettings>) => void),
-}
-
-const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => {
-  const onTimestampChanged = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    props.onChanged({
-      showTimestamp: event.target.checked,
-    });
-  }, [props]);
-
-  return (<FormGroup className="LogStreamSettingsPanel">
-    <FormControlLabel
-      control={
-        <Checkbox checked={props.settings.showTimestamp} onChange={onTimestampChanged} color="primary" />
-      }
-      label="Show Timestamp"
-    />
-  </FormGroup>);
-};
-
 const LogStreamPanel: React.FC = () => {
   const [settings, setSettings] = useState<LogStreamSettings>({
     showTimestamp: true,
+    labels: [
+      {
+        name: "Error",
+        category: LabelCategory.Error,
+        enabled: true,
+      },
+      {
+        name: "Warning",
+        category: LabelCategory.Warning,
+        enabled: true,
+      },
+      {
+        name: "Info",
+        category: LabelCategory.Info,
+        enabled: true,
+      },
+      {
+        name: "Debug",
+        category: LabelCategory.Debug,
+        enabled: false,
+      },
+    ],
   });
 
   const logs = useLogs();
