@@ -1,10 +1,11 @@
+import { blue, grey, red, yellow } from "@material-ui/core/colors";
 import moment from 'moment';
 import React, { useCallback, useEffect, useState } from 'react';
 import 'react-virtualized/styles.css';
 import './App.css';
 import { LogEntry, LogEntryList } from './components/LogEntry';
+import { LogStreamSettings, LogStreamSettingsPanel } from './components/LogStreamSettings';
 import { useQueue } from './hooks';
-import { LogStreamSettings, LogStreamSettingsPanel, LabelCategory } from './components/LogStreamSettings';
 
 
 type LogEntryEventHandler = (entry: LogEntry) => void
@@ -54,25 +55,31 @@ function useLogs() {
 const LogStreamPanel: React.FC = () => {
   const [settings, setSettings] = useState<LogStreamSettings>({
     showTimestamp: true,
+    patterns: [
+      {
+        regexp: /^<(.*)>: /,
+        label: "$1",
+      },
+    ],
     labels: [
       {
-        name: "Error",
-        category: LabelCategory.Error,
+        name: "error",
+        color: red,
         enabled: true,
       },
       {
-        name: "Warning",
-        category: LabelCategory.Warning,
+        name: "warning",
+        color: yellow,
         enabled: true,
       },
       {
-        name: "Info",
-        category: LabelCategory.Info,
+        name: "info",
+        color: blue,
         enabled: true,
       },
       {
-        name: "Debug",
-        category: LabelCategory.Debug,
+        name: "debug",
+        color: grey,
         enabled: false,
       },
     ],

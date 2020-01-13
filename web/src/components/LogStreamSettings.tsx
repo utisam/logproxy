@@ -1,31 +1,20 @@
-import React, { useCallback, ChangeEvent } from "react";
-import { FormGroup, FormControlLabel, Checkbox, withStyles, CheckboxProps, Color } from "@material-ui/core";
-import { red, grey, yellow, blue } from "@material-ui/core/colors";
-
-export enum LabelCategory {
-  Error,
-  Warning,
-  Info,
-  Debug,
-}
-
-export function LabelCategoryToColor(category?: LabelCategory): Color {
-  switch (category) {
-    case LabelCategory.Error: return red;
-    case LabelCategory.Warning: return yellow;
-    case LabelCategory.Info: return blue;
-  }
-
-  return grey;
-}
+import { Checkbox, CheckboxProps, Color, FormControlLabel, FormGroup, withStyles } from "@material-ui/core";
+import { grey } from "@material-ui/core/colors";
+import React, { ChangeEvent, useCallback } from "react";
 
 export interface LabelSetting {
   name: string,
-  category?: LabelCategory,
+  color?: Color,
   enabled: boolean
 }
 
+export interface LabelPattern {
+  regexp: RegExp,
+  label: string,
+}
+
 export interface LogStreamSettings {
+  patterns: LabelPattern[]
   labels: LabelSetting[],
   showTimestamp: boolean,
 }
@@ -52,7 +41,7 @@ const LabelCheckbox: React.FC<LabelCheckboxProps> = (props) => {
     });
   }, [props]);
 
-  const color = LabelCategoryToColor(props.label.category);
+  const color = props.label.color || grey;
   const ColoredCheckbox = withStyles({
     root: {
       color: color[800],
