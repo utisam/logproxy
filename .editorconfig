@@ -7,5 +7,8 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = false
 
+[*.go]
+indent_style = tab
+
 [*.{js,jsx,ts,tsx}]
 indent_size = 2
