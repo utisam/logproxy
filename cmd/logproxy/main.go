@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alexandrevicenzi/go-sse"
@@ -19,52 +20,68 @@ type LogEntry struct {
 	Text      string    `json:"text"`
 }
 
-func main() {
-	s := sse.NewServer(nil)
-	defer s.Shutdown()
+func scanLogs(logEntryCh chan<- LogEntry) {
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				fmt.Println(err)
+				close(logEntryCh)
+				return
+			}
 
-	http.Handle("/events/", s)
+			text := scanner.Text()
 
+			logEntryCh <- LogEntry{
+				Timestamp: time.Now(),
+				Text:      text,
+			}
+
+			fmt.Println("stdin: " + text)
+		}
+	}()
+}
+
+func createFrontenHandler() http.Handler {
 	frontend := os.Getenv("LOGPROXY_FRONTEND")
 	if frontend == "" {
 		frontend = "./web/build"
 	}
 
-	var handler http.Handler
 	if strings.HasPrefix(frontend, "http://") {
 		devServer, _ := url.Parse(frontend)
-		handler = httputil.NewSingleHostReverseProxy(devServer)
+		return httputil.NewSingleHostReverseProxy(devServer)
 	} else {
-		http.FileServer(http.Dir(frontend))
+		return http.FileServer(http.Dir(frontend))
 	}
+}
 
-	http.Handle("/", handler)
+func main() {
+	logEntryCh := make(chan LogEntry)
+	scanLogs(logEntryCh)
 
-	go func() {
-		for {
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				text := scanner.Text()
+	s := sse.NewServer(nil)
+	defer s.Shutdown()
 
-				entry := LogEntry{
-					Timestamp: time.Now(),
-					Text:      text,
+	startOnce := sync.Once{}
+	http.Handle("/events/", http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		startOnce.Do(func() {
+			go func() {
+				for entry := range logEntryCh {
+					json, err := json.Marshal(&entry)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
+						continue
+					}
+
+					s.SendMessage("/events/log", sse.SimpleMessage(string(json)))
 				}
+			}()
+		})
+		s.ServeHTTP(resp, req)
+	}))
 
-				json, err := json.Marshal(&entry)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "err: %s", err.Error())
-					continue
-				}
-
-				fmt.Print("stdin: " + text)
-				s.SendMessage("/events/log", sse.SimpleMessage(string(json)))
-			}
-			if err := scanner.Err(); err != nil {
-				fmt.Println(err)
-			}
-		}
-	}()
+	http.Handle("/", createFrontenHandler())
 
 	http.ListenAndServe(":8080", nil)
 }
