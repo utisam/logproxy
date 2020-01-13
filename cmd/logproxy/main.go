@@ -32,7 +32,7 @@ func main() {
 
 	var handler http.Handler
 	if strings.HasPrefix(frontend, "http://") {
-		devServer, _ := url.Parse("http://localhost:3000/")
+		devServer, _ := url.Parse(frontend)
 		handler = httputil.NewSingleHostReverseProxy(devServer)
 	} else {
 		http.FileServer(http.Dir(frontend))
