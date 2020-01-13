@@ -2,20 +2,20 @@ import { Checkbox, CheckboxProps, Color, FormControlLabel, FormGroup, withStyles
 import { grey } from "@material-ui/core/colors";
 import React, { ChangeEvent, useCallback } from "react";
 
-export interface LabelSetting {
+export interface LevelSetting {
   name: string,
   color?: Color,
   enabled: boolean
 }
 
-export interface LabelPattern {
+export interface LevelPattern {
   regexp: RegExp,
-  label: string,
+  level: string,
 }
 
 export interface LogStreamSettings {
-  patterns: LabelPattern[]
-  labels: LabelSetting[],
+  patterns: LevelPattern[]
+  levels: LevelSetting[],
   showTimestamp: boolean,
 }
 
@@ -26,22 +26,22 @@ export interface LogStreamPanelProps {
   onChanged: LogStreamSettingsChangedHandler,
 }
 
-interface LabelCheckboxProps {
-  label: LabelSetting,
+export type LevelCheckboxChangedHandler = (settings: Partial<LevelSetting>, index: number) => void;
+
+interface LevelCheckboxProps {
+  level: LevelSetting,
   index: number,
-  labels: LabelSetting[],
-  onChanged: LogStreamSettingsChangedHandler,
+  onChanged: LevelCheckboxChangedHandler,
 }
 
-const LabelCheckbox: React.FC<LabelCheckboxProps> = (props) => {
+const LevelCheckbox: React.FC<LevelCheckboxProps> = (props) => {
   const onChanged = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    props.labels[props.index].enabled = event.target.checked;
     props.onChanged({
-      labels: props.labels,
-    });
+      enabled: event.target.checked,
+    }, props.index);
   }, [props]);
 
-  const color = props.label.color || grey;
+  const color = props.level.color || grey;
   const ColoredCheckbox = withStyles({
     root: {
       color: color[800],
@@ -53,8 +53,8 @@ const LabelCheckbox: React.FC<LabelCheckboxProps> = (props) => {
   })((props: CheckboxProps) => <Checkbox color="default" {...props} />)
 
   return <FormControlLabel
-    control={<ColoredCheckbox checked={props.label.enabled} onChange={onChanged} />}
-    label={props.label.name}
+    control={<ColoredCheckbox checked={props.level.enabled} onChange={onChanged} />}
+    label={props.level.name}
   />
 };
 
@@ -65,9 +65,20 @@ export const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => 
     });
   }, [props]);
 
+  const onLevelCheckboxChanged = useCallback((settings: Partial<LevelSetting>, index: number) => {
+    props.onChanged({
+      levels: props.settings.levels.map((s, i) => {
+        if (i == index) {
+          return {...s, ...settings};
+        }
+        return s;
+      }),
+    });
+  }, [props]);
+
   return (<div className="LogStreamSettingsPanel">
     <FormGroup row>
-      {props.settings.labels.map((label, index, labels) => <LabelCheckbox key={index} label={label} index={index} labels={labels} onChanged={props.onChanged} />)}
+      {props.settings.levels.map((label, index) => <LevelCheckbox key={index} level={label} index={index} onChanged={onLevelCheckboxChanged} />)}
     </FormGroup>
     <FormGroup row>
       <FormControlLabel

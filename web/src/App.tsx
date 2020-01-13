@@ -58,10 +58,10 @@ const LogStreamPanel: React.FC = () => {
     patterns: [
       {
         regexp: /^<(.*)>: /,
-        label: "$1",
+        level: "$1",
       },
     ],
-    labels: [
+    levels: [
       {
         name: "error",
         color: red,
