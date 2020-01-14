@@ -6,11 +6,13 @@ import (
 )
 
 var patterns = []string{
-	"<debug> debug message 1",
-	"<debug> debug message 2",
-	"<info> info message",
-	"<error> error message",
-	"<warning> warning message",
+	"<debug>: debug message 1",
+	"<debug>: debug message 2",
+	"<info>: info message",
+	"<error>: error message",
+	"<warning>: warning message",
+	"<unexpected>: unexpected message",
+	"no level message",
 }
 
 func main() {
