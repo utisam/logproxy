@@ -18,10 +18,20 @@ html, body, #root, .App {
     padding: 4px;
 }
 .LogEntryRow>* {
+    margin: 2px;
     padding: 4px;
 }
+.LogEntryRow>*:first-child {
+    margin-left: 0;
+}
+.LogEntryRow>*:last-child {
+    margin-right: 0;
+}
 .LogEntryRow__Timestamp {
-    background-color: #ccc;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+}
+.LogEntryRow__Level {
     border-radius: 4px;
 }
 .LogEntryRow__Text {

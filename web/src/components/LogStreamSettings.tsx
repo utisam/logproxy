@@ -14,7 +14,7 @@ export interface LevelPattern {
 }
 
 export interface LogStreamSettings {
-  patterns: LevelPattern[]
+  pattern: LevelPattern
   levels: LevelSetting[],
   showTimestamp: boolean,
 }
@@ -68,7 +68,7 @@ export const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => 
   const onLevelCheckboxChanged = useCallback((settings: Partial<LevelSetting>, index: number) => {
     props.onChanged({
       levels: props.settings.levels.map((s, i) => {
-        if (i == index) {
+        if (i === index) {
           return {...s, ...settings};
         }
         return s;
