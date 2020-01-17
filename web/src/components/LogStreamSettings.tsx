@@ -58,7 +58,7 @@ const LevelCheckbox: React.FC<LevelCheckboxProps> = (props) => {
   />
 };
 
-export const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => {
+export const LogStreamSettingsPanel = React.memo<LogStreamPanelProps>((props) => {
   const onTimestampChanged = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     props.onChanged({
       showTimestamp: event.target.checked,
@@ -89,4 +89,4 @@ export const LogStreamSettingsPanel: React.FC<LogStreamPanelProps> = (props) => 
       />
     </FormGroup>
   </div>);
-};
+});

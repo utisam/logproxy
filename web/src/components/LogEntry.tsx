@@ -4,10 +4,13 @@ import moment from "moment";
 import React, { useState } from "react";
 import { AutoSizer, List, ListRowProps } from 'react-virtualized';
 
+export type LevelCounts = {[key: string]: number};
+
 export interface LogEntry {
   timestamp: moment.Moment,
   level: string,
   text: string,
+  levelCounts: LevelCounts,
 }
 
 export interface LogEntryLevelSetting {
@@ -37,14 +40,51 @@ export const LogEntryRow: React.FC<LogEntryRowProps> = (props) => {
   </div>)
 }
 
+export interface LogEntries {
+  entries: LogEntry[],
+  levelCountOffsets: LevelCounts,
+}
+
 export interface LogEntryListProps {
-  logs: LogEntry[],
+  logEntries: LogEntries,
   showTimestamp: boolean,
   levelSettings: Map<string, LogEntryLevelSetting>,
+  enableLevels: Set<string>,
+}
+
+function renderedCount(entry: LogEntry, enableLevels: Set<string>) {
+  return Object.entries(entry.levelCounts)
+    .filter(([level, _]: [string, number]) => enableLevels.has(level))
+    .map(([_, count]: [string, number]) => count)
+    .reduce((count: number, current: number) => current + count, 0);
+}
+
+function countRendered(logEntries: LogEntries, enableLevels: Set<string>): number {
+  const length = logEntries.entries.length;
+  if (length === 0) return 0;
+  return renderedCount(logEntries.entries[length - 1], enableLevels);
+}
+
+function indexOfRendered(logEntries: LogEntries, enableLevels: Set<string>, index: number, begin: number, end: number): number {
+  if (begin === end) {
+    return -1;
+  }
+
+  const med = Math.floor((begin + end) / 2);
+  const medEntry = logEntries.entries[med];
+  const shownLogIndex = renderedCount(medEntry, enableLevels) - 1;
+  if (shownLogIndex === -1 || shownLogIndex < index) {
+    return indexOfRendered(logEntries, enableLevels, index, med + 1, end);
+  } else if (shownLogIndex > index || !enableLevels.has(medEntry.level)) {
+    return indexOfRendered(logEntries, enableLevels, index, begin, med);
+  }
+  return med;
 }
 
 export const LogEntryList: React.FC<LogEntryListProps> = (props) => {
   const [lastRenderedBefore, setLastRenderedBefore] = useState(false);
+
+  const shownLogCount = countRendered(props.logEntries, props.enableLevels);
 
   return (<AutoSizer>
     {({ width, height }) =>
@@ -52,17 +92,20 @@ export const LogEntryList: React.FC<LogEntryListProps> = (props) => {
         height={height}
         rowHeight={32}
         rowRenderer={({ index, key, style }: ListRowProps) => {
-          setLastRenderedBefore(index === props.logs.length - 1);
-          const log = props.logs[index];
+          setLastRenderedBefore(index === shownLogCount - 1);
+
+          const logIndex = indexOfRendered(props.logEntries, props.enableLevels, index, 0, props.logEntries.entries.length);
+
+          const entry = props.logEntries.entries[logIndex];
           return (<LogEntryRow
             key={key}
             style={style}
-            entry={log}
+            entry={entry}
             showTimestamp={props.showTimestamp}
-            setting={props.levelSettings.get(log.level)} />);
+            setting={props.levelSettings.get(entry.level)} />);
         }}
-        rowCount={props.logs.length}
-        scrollToIndex={lastRenderedBefore ? props.logs.length - 1 : undefined}
+        rowCount={shownLogCount}
+        scrollToIndex={lastRenderedBefore ? shownLogCount - 1 : undefined}
         width={width}
       />
     }

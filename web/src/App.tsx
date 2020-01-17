@@ -3,9 +3,8 @@ import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import 'react-virtualized/styles.css';
 import './App.css';
-import { LogEntry, LogEntryLevelSetting, LogEntryList } from './components/LogEntry';
+import { LevelCounts, LogEntries, LogEntryLevelSetting, LogEntryList } from './components/LogEntry';
 import { LevelPattern, LogStreamSettings, LogStreamSettingsPanel } from './components/LogStreamSettings';
-import { useQueue } from './hooks';
 
 interface RawLogEntry {
   timestamp: moment.Moment,
@@ -46,28 +45,49 @@ class LogEntryEventSource {
 
 const logEntryEventSource = new LogEntryEventSource();
 
-function useLogs(pattern: LevelPattern) {
-  const [logs, enqueueLogs] = useQueue<LogEntry>(100000);
+function incrementLevelCounts(counts: LevelCounts, level: string) {
+  return {...counts, [level]: counts[level] + 1 || 1};
+}
+
+const logEntryMax = 10000;
+
+function useLogEntryList(pattern: LevelPattern, levelSettings: Map<string, LogEntryLevelSetting>) {
+  const [logEntryList, setLogEntryList] = useState<LogEntries>({entries: [], levelCountOffsets: {}});
 
   useEffect(() => {
     logEntryEventSource.addLogEntryListener((rawEntry) => {
       let level = "", text = rawEntry.text;
 
       const res = pattern.regexp.exec(rawEntry.text);
-      if (res && 2 <= res.length) {
+      if (res && 2 <= res.length && levelSettings.has(res[1])) {
         level = res[1];
         text = text.slice(res[0].length);
       }
 
-      enqueueLogs({
-        timestamp: rawEntry.timestamp,
-        text: text,
-        level: level,
-      })
-    });
-  }, [enqueueLogs, pattern]);
+      setLogEntryList(({entries, levelCountOffsets}: LogEntries) => {
+        const lastEntry = entries[entries.length - 1] || {};
 
-  return logs;
+        const nextEntries = [...entries.slice(-(logEntryMax - 1)), {
+          timestamp: rawEntry.timestamp,
+          text: text,
+          level: level,
+          levelCounts: incrementLevelCounts(lastEntry.levelCounts || Object.create(null), level),
+        }];
+
+        if (entries.length === logEntryMax) {
+          const first = entries[0];
+          levelCountOffsets = incrementLevelCounts(levelCountOffsets, first.level);
+        }
+
+        return {
+          entries: nextEntries,
+          levelCountOffsets: levelCountOffsets,
+        };
+      });
+    });
+  }, [setLogEntryList, pattern]);
+
+  return logEntryList;
 }
 
 const LogStreamPanel: React.FC = () => {
@@ -78,6 +98,11 @@ const LogStreamPanel: React.FC = () => {
       level: "$1",
     },
     levels: [
+      {
+        name: "",
+        color: grey,
+        enabled: true,
+      },
       {
         name: "error",
         color: red,
@@ -96,7 +121,7 @@ const LogStreamPanel: React.FC = () => {
       {
         name: "debug",
         color: grey,
-        enabled: false,
+        enabled: true,
       },
     ],
   });
@@ -105,17 +130,23 @@ const LogStreamPanel: React.FC = () => {
     return new Map(settings.levels.map(lv => [lv.name, lv]));
   }, [settings.levels]);
 
-  const logs = useLogs(settings.pattern);
+  const enableLevels = useMemo((): Set<string> => {
+    return new Set(settings.levels.filter(lv => lv.enabled).map(lv => lv.name));
+  }, [settings.levels]);
+
+  const logEntries = useLogEntryList(settings.pattern, levelSettings);
 
   // TODO: Parse levels
   // TODO: Search text
 
+  const onLogStreamSettingsChanged = useCallback((change: Partial<LogStreamSettings>) => {
+    setSettings((settings) => ({...settings, ...change}));
+  }, [setSettings]);
+
   return (<div style={{flexGrow: 1, display: "flex", flexDirection: "column"}}>
-    <LogStreamSettingsPanel settings={settings} onChanged={useCallback((change: Partial<LogStreamSettings>) => {
-      setSettings((settings) => ({...settings, ...change}));
-    }, [setSettings])} />
+    <LogStreamSettingsPanel settings={settings} onChanged={onLogStreamSettingsChanged} />
     <div style={{flexGrow: 1}}>
-      <LogEntryList logs={logs} showTimestamp={settings.showTimestamp} levelSettings={levelSettings} />
+      <LogEntryList logEntries={logEntries} showTimestamp={settings.showTimestamp} levelSettings={levelSettings} enableLevels={enableLevels} />
     </div>
   </div>);
 };

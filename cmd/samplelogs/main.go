@@ -20,6 +20,6 @@ func main() {
 	for {
 		fmt.Println(patterns[index])
 		index = (index + 1) % len(patterns)
-		time.Sleep(1 * time.Second)
+		time.Sleep(20 * time.Millisecond)
 	}
 }
